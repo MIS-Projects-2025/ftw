@@ -12,6 +12,8 @@ require __DIR__ . '/auth.php';
 // General routes
 require __DIR__ . '/general.php';
 
+// Fit To Work routes
+require __DIR__ . '/ftw.php';
 Route::get("/demo", [DemoController::class, 'index'])->name('demo');
 
 Route::fallback(function () {
