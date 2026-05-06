@@ -52,25 +52,39 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
     );
 
     const fitToWorkId = useMemo(
-        () => recommendations.find((r) => r.rec_label.toLowerCase().includes("fit to work"))?.rec_id,
+        () =>
+            recommendations.find((r) =>
+                r.rec_label.toLowerCase().includes("fit to work"),
+            )?.rec_id,
         [recommendations],
     );
 
     const restId = useMemo(
-        () => recommendations.find((r) => r.rec_label.toLowerCase().includes("rest"))?.rec_id,
+        () =>
+            recommendations.find((r) =>
+                r.rec_label.toLowerCase().includes("rest"),
+            )?.rec_id,
         [recommendations],
     );
 
     // Sent Home + Hospital — have Time Out (sdh_time)
     const sdhWithTimeIds = useMemo(
-        () => recommendations
-            .filter((r) => ["sent home", "hospital"].some((kw) => r.rec_label.toLowerCase().includes(kw)))
-            .map((r) => r.rec_id),
+        () =>
+            recommendations
+                .filter((r) =>
+                    ["sent home", "hospital"].some((kw) =>
+                        r.rec_label.toLowerCase().includes(kw),
+                    ),
+                )
+                .map((r) => r.rec_id),
         [recommendations],
     );
 
     const unfitId = useMemo(
-        () => recommendations.find((r) => r.rec_label.toLowerCase().includes("unfit"))?.rec_id,
+        () =>
+            recommendations.find((r) =>
+                r.rec_label.toLowerCase().includes("unfit"),
+            )?.rec_id,
         [recommendations],
     );
 
@@ -80,7 +94,7 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
 
     const loadEmployees = useCallback(async (search, page) => {
         const params = new URLSearchParams({ search, page });
-        const res  = await fetch(`${route("ftw.employees")}?${params}`);
+        const res = await fetch(`${route("ftw.employees")}?${params}`);
         const json = await res.json();
         const list = json.data ?? [];
 
@@ -88,7 +102,6 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
             ...prev,
             ...Object.fromEntries(list.map((e) => [String(e.employid), e])),
         }));
-
 
         return {
             options: list.map((e) => ({
@@ -102,37 +115,37 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
     // ── Form state (dates stored as "YYYY-MM-DD" strings) ─────────────────
 
     const INITIAL = {
-        emp_no:        "",
-        emp_name:      "",
-        emp_dept:      "",
-        emp_team:      "",
+        emp_no: "",
+        emp_name: "",
+        emp_dept: "",
+        emp_team: "",
         recommendation: "",
         // Fit to Work
-        emp_time_in:   "",
-        emp_diagnose:  "",
-        emp_shift:     "",
-        absence_dates: [],  // string[]
-        absent_count:  0,
-        ftw_file:      null,
+        emp_time_in: "",
+        emp_diagnose: "",
+        emp_shift: "",
+        absence_dates: [], // string[]
+        absent_count: 0,
+        ftw_file: null,
         // Sent Home / Hospital
-        sdh_date:      "",
-        sdh_time:      "",
+        sdh_date: "",
+        sdh_time: "",
         // Unfit to Work
-        remarks:       "",
+        remarks: "",
         // Rest
-        rest_date:     "",
-        rest_time_in:  "",
+        rest_date: "",
+        rest_time_in: "",
     };
 
     const { data, setData, post, processing, errors, reset } = useForm(INITIAL);
 
-    const recId       = data.recommendation ? parseInt(data.recommendation) : null;
+    const recId = data.recommendation ? parseInt(data.recommendation) : null;
     const selectedRec = recId ? recById[recId] : null;
 
     const isFitToWork = recId === fitToWorkId;
-    const isSdh       = sdhWithTimeIds.includes(recId);   // Sent Home + Hospital only
-    const isUnfit     = recId === unfitId;
-    const isRest      = recId === restId;
+    const isSdh = sdhWithTimeIds.includes(recId); // Sent Home + Hospital only
+    const isUnfit = recId === unfitId;
+    const isRest = recId === restId;
 
     // Disable weekends in the absence date picker when shift = Normal (3)
     const weekendDisabled = useMemo(
@@ -152,10 +165,10 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
         const emp = val ? (empCache[val] ?? null) : null;
         setData({
             ...data,
-            emp_no:   val ?? "",
-            emp_name: emp?.emp_name   ?? "",
+            emp_no: val ?? "",
+            emp_name: emp?.emp_name ?? "",
             emp_dept: emp?.department ?? "",
-            emp_team: emp?.team       ?? "",
+            emp_team: emp?.team ?? "",
         });
     }
 
@@ -163,28 +176,34 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
         setData({
             ...data,
             recommendation: val,
-            emp_time_in:    "",
-            emp_diagnose:   "",
-            emp_shift:      "",
-            absence_dates:  [],
-            absent_count:   0,
-            ftw_file:       null,
-            sdh_date:       "",
-            sdh_time:       "",
-            remarks:        "",
-            rest_date:      "",
-            rest_time_in:   "",
+            emp_time_in: "",
+            emp_diagnose: "",
+            emp_shift: "",
+            absence_dates: [],
+            absent_count: 0,
+            ftw_file: null,
+            sdh_date: "",
+            sdh_time: "",
+            remarks: "",
+            rest_date: "",
+            rest_time_in: "",
         });
     }
 
     function handleShiftChange(val) {
-        const filtered = val === "3"
-            ? data.absence_dates.filter((s) => {
-                  const d = parseDate(s);
-                  return d && d.getDay() !== 0 && d.getDay() !== 6;
-              })
-            : data.absence_dates;
-        setData({ ...data, emp_shift: val, absence_dates: filtered, absent_count: filtered.length });
+        const filtered =
+            val === "3"
+                ? data.absence_dates.filter((s) => {
+                      const d = parseDate(s);
+                      return d && d.getDay() !== 0 && d.getDay() !== 6;
+                  })
+                : data.absence_dates;
+        setData({
+            ...data,
+            emp_shift: val,
+            absence_dates: filtered,
+            absent_count: filtered.length,
+        });
     }
 
     function handleAbsenceDatesChange(dates) {
@@ -213,7 +232,6 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
     return (
         <AuthenticatedLayout>
             <div className="space-y-5 pb-10">
-
                 {/* ── Page header ── */}
                 <div className="flex items-center gap-3">
                     <Button
@@ -229,14 +247,17 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                         <Stethoscope className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-semibold leading-tight">New FTW Record</h1>
-                        <p className="text-sm text-muted-foreground">Create a new Fit to Work record</p>
+                        <h1 className="text-lg font-semibold leading-tight">
+                            New FTW Record
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Create a new Fit to Work record
+                        </p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     <div className="space-y-4">
-
                         {/* ── Card: Basic info ── */}
                         <div className="rounded-xl border bg-card shadow-sm">
                             <div className="px-5 py-3 border-b">
@@ -245,17 +266,21 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                 </p>
                             </div>
                             <div className="px-5 py-4 space-y-4">
-
                                 {/* Row 1: Employee | Employee Name */}
                                 {canSelectEmployee && (
                                     <div className="grid grid-cols-2 gap-4">
-                                        <FieldRow label="Employee" error={errors.emp_no}>
+                                        <FieldRow
+                                            label="Employee"
+                                            error={errors.emp_no}
+                                        >
                                             <Combobox
                                                 placeholder="Search employee…"
                                                 value={data.emp_no}
                                                 onChange={handleEmployeeChange}
                                                 loadOptions={loadEmployees}
-                                                getDisplayValue={(opt) => opt.value}
+                                                getDisplayValue={(opt) =>
+                                                    opt.value
+                                                }
                                                 clearable
                                             />
                                         </FieldRow>
@@ -293,17 +318,25 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                 )}
 
                                 {/* Row 3: Recommendation (full width) */}
-                                <FieldRow label="Recommendation" error={errors.recommendation}>
+                                <FieldRow
+                                    label="Recommendation"
+                                    error={errors.recommendation}
+                                >
                                     <Select
                                         value={data.recommendation}
-                                        onValueChange={handleRecommendationChange}
+                                        onValueChange={
+                                            handleRecommendationChange
+                                        }
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select recommendation…" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {recommendations.map((r) => (
-                                                <SelectItem key={r.rec_id} value={String(r.rec_id)}>
+                                                <SelectItem
+                                                    key={r.rec_id}
+                                                    value={String(r.rec_id)}
+                                                >
                                                     {r.rec_label}
                                                 </SelectItem>
                                             ))}
@@ -320,67 +353,109 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                         Details
                                     </p>
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge
+                                        variant="secondary"
+                                        className="text-xs"
+                                    >
                                         {selectedRec?.rec_label}
                                     </Badge>
                                 </div>
                                 <div className="px-5 py-4 space-y-4">
-
                                     {/* ── Fit to Work ─────────────────────── */}
                                     {isFitToWork && (
                                         <>
                                             {/* Time In | Shift */}
                                             <div className="grid grid-cols-2 gap-4">
-                                                <FieldRow label="Time In" error={errors.emp_time_in}>
+                                                <FieldRow
+                                                    label="Time In"
+                                                    error={errors.emp_time_in}
+                                                >
                                                     <Input
                                                         type="time"
                                                         value={data.emp_time_in}
-                                                        onChange={(e) => setData("emp_time_in", e.target.value)}
+                                                        onChange={(e) =>
+                                                            setData(
+                                                                "emp_time_in",
+                                                                e.target.value,
+                                                            )
+                                                        }
                                                     />
                                                 </FieldRow>
-                                                <FieldRow label="Shift" error={errors.emp_shift}>
-                                                    <ShiftSelect value={data.emp_shift} onChange={handleShiftChange} />
+                                                <FieldRow
+                                                    label="Shift"
+                                                    error={errors.emp_shift}
+                                                >
+                                                    <ShiftSelect
+                                                        value={data.emp_shift}
+                                                        onChange={
+                                                            handleShiftChange
+                                                        }
+                                                    />
                                                 </FieldRow>
                                             </div>
 
                                             {/* Diagnosis */}
-                                            <FieldRow label="Diagnosis Details" error={errors.emp_diagnose}>
+                                            <FieldRow
+                                                label="Diagnosis Details"
+                                                error={errors.emp_diagnose}
+                                            >
                                                 <Textarea
                                                     placeholder="Enter diagnosis details…"
                                                     rows={3}
                                                     value={data.emp_diagnose}
-                                                    onChange={(e) => setData("emp_diagnose", e.target.value)}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            "emp_diagnose",
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="resize-none"
                                                 />
                                             </FieldRow>
 
                                             {/* Date of Absences */}
                                             <div className="space-y-2">
-                                                <Label className="text-sm">Date of Absences</Label>
+                                                <Label className="text-sm">
+                                                    Date of Absences
+                                                </Label>
                                                 <MultiDatePicker
                                                     value={absenceDateObjects}
-                                                    onChange={handleAbsenceDatesChange}
+                                                    onChange={
+                                                        handleAbsenceDatesChange
+                                                    }
                                                     placeholder="Select absence dates…"
                                                     disabled={weekendDisabled}
                                                 />
-                                                {data.absence_dates.length > 0 && (
+                                                {data.absence_dates.length >
+                                                    0 && (
                                                     <div className="flex flex-wrap gap-1.5 pt-1">
-                                                        {[...data.absence_dates].sort().map((s) => (
-                                                            <Badge
-                                                                key={s}
-                                                                variant="secondary"
-                                                                className="gap-1 pl-2.5 pr-1 text-xs"
-                                                            >
-                                                                {format(parseDate(s), "MMM d, yyyy")}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeAbsenceDate(s)}
-                                                                    className="ml-0.5 rounded p-0.5 hover:bg-muted-foreground/20 transition-colors"
+                                                        {[...data.absence_dates]
+                                                            .sort()
+                                                            .map((s) => (
+                                                                <Badge
+                                                                    key={s}
+                                                                    variant="secondary"
+                                                                    className="gap-1 pl-2.5 pr-1 text-xs"
                                                                 >
-                                                                    <X className="h-3 w-3" />
-                                                                </button>
-                                                            </Badge>
-                                                        ))}
+                                                                    {format(
+                                                                        parseDate(
+                                                                            s,
+                                                                        ),
+                                                                        "MMM d, yyyy",
+                                                                    )}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            removeAbsenceDate(
+                                                                                s,
+                                                                            )
+                                                                        }
+                                                                        className="ml-0.5 rounded p-0.5 hover:bg-muted-foreground/20 transition-colors"
+                                                                    >
+                                                                        <X className="h-3 w-3" />
+                                                                    </button>
+                                                                </Badge>
+                                                            ))}
                                                     </div>
                                                 )}
                                             </div>
@@ -390,15 +465,27 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                                 <FieldRow label="Total Days of Absence">
                                                     <Input
                                                         readOnly
-                                                        value={data.absent_count}
+                                                        value={
+                                                            data.absent_count
+                                                        }
                                                         className="bg-muted/50 cursor-default"
                                                     />
                                                 </FieldRow>
-                                                <FieldRow label="Attached File" error={errors.ftw_file}>
+                                                <FieldRow
+                                                    label="Attached File"
+                                                    error={errors.ftw_file}
+                                                >
                                                     <Input
                                                         type="file"
                                                         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                                        onChange={(e) => setData("ftw_file", e.target.files?.[0] ?? null)}
+                                                        onChange={(e) =>
+                                                            setData(
+                                                                "ftw_file",
+                                                                e.target
+                                                                    .files?.[0] ??
+                                                                    null,
+                                                            )
+                                                        }
                                                         className="cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary hover:file:bg-primary/20"
                                                     />
                                                 </FieldRow>
@@ -409,36 +496,78 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                     {/* ── Sent Home / Send to Hospital ── */}
                                     {isSdh && (
                                         <>
-                                            <FieldRow label="Diagnosis Details" error={errors.emp_diagnose}>
+                                            <FieldRow
+                                                label="Diagnosis Details"
+                                                error={errors.emp_diagnose}
+                                            >
                                                 <Textarea
                                                     placeholder="Enter diagnosis details…"
                                                     rows={3}
                                                     value={data.emp_diagnose}
-                                                    onChange={(e) => setData("emp_diagnose", e.target.value)}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            "emp_diagnose",
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="resize-none"
                                                 />
                                             </FieldRow>
 
                                             {/* Day Shift | Date | Time Out */}
                                             <div className="grid grid-cols-3 gap-4">
-                                                <FieldRow label="Day Shift" error={errors.emp_shift}>
+                                                <FieldRow
+                                                    label="Day Shift"
+                                                    error={errors.emp_shift}
+                                                >
                                                     <ShiftSelect
                                                         value={data.emp_shift}
-                                                        onChange={(val) => setData("emp_shift", val)}
+                                                        onChange={(val) =>
+                                                            setData(
+                                                                "emp_shift",
+                                                                val,
+                                                            )
+                                                        }
                                                     />
                                                 </FieldRow>
-                                                <FieldRow label={sdhDateLabel(recId, recById)} error={errors.sdh_date}>
+                                                <FieldRow
+                                                    label={sdhDateLabel(
+                                                        recId,
+                                                        recById,
+                                                    )}
+                                                    error={errors.sdh_date}
+                                                >
                                                     <DatePicker
-                                                        value={parseDate(data.sdh_date)}
-                                                        onChange={(d) => setData("sdh_date", d ? format(d, "yyyy-MM-dd") : "")}
+                                                        value={parseDate(
+                                                            data.sdh_date,
+                                                        )}
+                                                        onChange={(d) =>
+                                                            setData(
+                                                                "sdh_date",
+                                                                d
+                                                                    ? format(
+                                                                          d,
+                                                                          "yyyy-MM-dd",
+                                                                      )
+                                                                    : "",
+                                                            )
+                                                        }
                                                         placeholder="Select date…"
                                                     />
                                                 </FieldRow>
-                                                <FieldRow label="Time Out" error={errors.sdh_time}>
+                                                <FieldRow
+                                                    label="Time Out"
+                                                    error={errors.sdh_time}
+                                                >
                                                     <Input
                                                         type="time"
                                                         value={data.sdh_time}
-                                                        onChange={(e) => setData("sdh_time", e.target.value)}
+                                                        onChange={(e) =>
+                                                            setData(
+                                                                "sdh_time",
+                                                                e.target.value,
+                                                            )
+                                                        }
                                                     />
                                                 </FieldRow>
                                             </div>
@@ -448,27 +577,58 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                     {/* ── Unfit to Work ── */}
                                     {isUnfit && (
                                         <>
-                                            <FieldRow label="Remarks" error={errors.remarks}>
+                                            <FieldRow
+                                                label="Remarks"
+                                                error={errors.remarks}
+                                            >
                                                 <Textarea
                                                     placeholder="Enter remarks…"
                                                     rows={3}
                                                     value={data.remarks}
-                                                    onChange={(e) => setData("remarks", e.target.value)}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            "remarks",
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="resize-none"
                                                 />
                                             </FieldRow>
 
                                             <div className="grid grid-cols-2 gap-4">
-                                                <FieldRow label="Day Shift" error={errors.emp_shift}>
+                                                <FieldRow
+                                                    label="Day Shift"
+                                                    error={errors.emp_shift}
+                                                >
                                                     <ShiftSelect
                                                         value={data.emp_shift}
-                                                        onChange={(val) => setData("emp_shift", val)}
+                                                        onChange={(val) =>
+                                                            setData(
+                                                                "emp_shift",
+                                                                val,
+                                                            )
+                                                        }
                                                     />
                                                 </FieldRow>
-                                                <FieldRow label="Date" error={errors.sdh_date}>
+                                                <FieldRow
+                                                    label="Date"
+                                                    error={errors.sdh_date}
+                                                >
                                                     <DatePicker
-                                                        value={parseDate(data.sdh_date)}
-                                                        onChange={(d) => setData("sdh_date", d ? format(d, "yyyy-MM-dd") : "")}
+                                                        value={parseDate(
+                                                            data.sdh_date,
+                                                        )}
+                                                        onChange={(d) =>
+                                                            setData(
+                                                                "sdh_date",
+                                                                d
+                                                                    ? format(
+                                                                          d,
+                                                                          "yyyy-MM-dd",
+                                                                      )
+                                                                    : "",
+                                                            )
+                                                        }
                                                         placeholder="Select date…"
                                                     />
                                                 </FieldRow>
@@ -479,30 +639,63 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                     {/* ── Rest ── */}
                                     {isRest && (
                                         <>
-                                            <FieldRow label="Diagnosis Details" error={errors.emp_diagnose}>
+                                            <FieldRow
+                                                label="Diagnosis Details"
+                                                error={errors.emp_diagnose}
+                                            >
                                                 <Textarea
                                                     placeholder="Enter diagnosis details…"
                                                     rows={3}
                                                     value={data.emp_diagnose}
-                                                    onChange={(e) => setData("emp_diagnose", e.target.value)}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            "emp_diagnose",
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="resize-none"
                                                 />
                                             </FieldRow>
 
                                             {/* Date | Time In | Time Out (readonly) */}
                                             <div className="grid grid-cols-3 gap-4">
-                                                <FieldRow label="Date" error={errors.rest_date}>
+                                                <FieldRow
+                                                    label="Date"
+                                                    error={errors.rest_date}
+                                                >
                                                     <DatePicker
-                                                        value={parseDate(data.rest_date)}
-                                                        onChange={(d) => setData("rest_date", d ? format(d, "yyyy-MM-dd") : "")}
+                                                        value={parseDate(
+                                                            data.rest_date,
+                                                        )}
+                                                        onChange={(d) =>
+                                                            setData(
+                                                                "rest_date",
+                                                                d
+                                                                    ? format(
+                                                                          d,
+                                                                          "yyyy-MM-dd",
+                                                                      )
+                                                                    : "",
+                                                            )
+                                                        }
                                                         placeholder="Select date…"
                                                     />
                                                 </FieldRow>
-                                                <FieldRow label="Time In (SDH Time In)" error={errors.rest_time_in}>
+                                                <FieldRow
+                                                    label="Time In (SDH Time In)"
+                                                    error={errors.rest_time_in}
+                                                >
                                                     <Input
                                                         type="time"
-                                                        value={data.rest_time_in}
-                                                        onChange={(e) => setData("rest_time_in", e.target.value)}
+                                                        value={
+                                                            data.rest_time_in
+                                                        }
+                                                        onChange={(e) =>
+                                                            setData(
+                                                                "rest_time_in",
+                                                                e.target.value,
+                                                            )
+                                                        }
                                                     />
                                                 </FieldRow>
                                                 <FieldRow label="Time Out">
@@ -514,13 +707,13 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                                                         tabIndex={-1}
                                                     />
                                                     <p className="text-[11px] text-muted-foreground mt-1">
-                                                        Set when employee returns
+                                                        Set when employee
+                                                        returns
                                                     </p>
                                                 </FieldRow>
                                             </div>
                                         </>
                                     )}
-
                                 </div>
                             </div>
                         )}
@@ -534,7 +727,10 @@ export default function CreateFtw({ recommendations, canSelectEmployee }) {
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={processing || !data.recommendation}>
+                            <Button
+                                type="submit"
+                                disabled={processing || !data.recommendation}
+                            >
                                 {processing ? "Submitting…" : "Submit Record"}
                             </Button>
                         </div>

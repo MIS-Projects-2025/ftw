@@ -10,6 +10,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class FtwRecord extends Model
 {
+    // Process status constants
+    const PROCESS_STATUS_DRAFT = 1;        // Created by clinic, pending supervisor
+    const PROCESS_STATUS_PENDING_SUP = 2;  // Sent to supervisor, pending approval  
+    const PROCESS_STATUS_PENDING_ACK = 3;  // Approved by sup, pending employee ack
+    const PROCESS_STATUS_COMPLETED = 4;    // Fully approved/rejected/completed
+
     protected $table = 'ftw_records';
 
     protected $primaryKey = 'tbl_id';
@@ -36,7 +42,7 @@ class FtwRecord extends Model
         'absent_count',
         'disapprove_remarks',
         'ftw_date',
-        'process_status', // 1 = Pending, 2 = For Supervisor Approval, 3 = Approved, 4 = Disapproved
+        'process_status',
     ];
 
     protected $casts = [
@@ -56,7 +62,6 @@ class FtwRecord extends Model
     // Relationships
     // -------------------------------------------------------
 
-
     /**
      * The recommendation type for this record.
      */
@@ -64,7 +69,6 @@ class FtwRecord extends Model
     {
         return $this->belongsTo(RecommendationRef::class, 'recommendation', 'rec_id');
     }
-
 
     /**
      * All absence dates linked to this record.
@@ -133,5 +137,56 @@ class FtwRecord extends Model
     public function scopeBetweenDates($query, string $from, string $to)
     {
         return $query->whereBetween('ftw_date', [$from, $to]);
+    }
+
+    // -------------------------------------------------------
+    // Helper Methods
+    // -------------------------------------------------------
+
+    /**
+     * Check if the record is pending for a specific user type
+     */
+    public function isPendingFor(bool $isSupervisor): bool
+    {
+        if ($isSupervisor) {
+            return $this->process_status === self::PROCESS_STATUS_PENDING_SUP;
+        }
+        return $this->process_status === self::PROCESS_STATUS_PENDING_ACK;
+    }
+
+    /**
+     * Check if the record is completed
+     */
+    public function isCompleted(): bool
+    {
+        return $this->process_status === self::PROCESS_STATUS_COMPLETED;
+    }
+
+    /**
+     * Get process status label
+     */
+    public function getProcessStatusLabelAttribute(): string
+    {
+        return match ($this->process_status) {
+            self::PROCESS_STATUS_DRAFT => 'Draft',
+            self::PROCESS_STATUS_PENDING_SUP => 'Pending Supervisor Approval',
+            self::PROCESS_STATUS_PENDING_ACK => 'Pending Employee Acknowledgement',
+            self::PROCESS_STATUS_COMPLETED => 'Completed',
+            default => 'Unknown'
+        };
+    }
+
+    /**
+     * Get process status badge class
+     */
+    public function getProcessStatusBadgeAttribute(): string
+    {
+        return match ($this->process_status) {
+            self::PROCESS_STATUS_DRAFT => 'secondary',
+            self::PROCESS_STATUS_PENDING_SUP => 'warning',
+            self::PROCESS_STATUS_PENDING_ACK => 'info',
+            self::PROCESS_STATUS_COMPLETED => 'success',
+            default => 'dark'
+        };
     }
 }

@@ -6,6 +6,7 @@ use App\Models\FtwApproval;
 use App\Models\FtwRecord;
 use App\Repositories\FtwRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class FtwService
 {
@@ -25,6 +26,97 @@ class FtwService
 
 
 
+    public function getHistoryData(
+        int $empId,
+        bool $isClinic,
+        bool $isSupervisor,
+        array $directReportIds,
+        string $search,
+        string $orderBy,
+        string $orderDir,
+        int $page,
+        int $perPage,
+    ): array {
+        return $this->repo->getHistory(
+            $empId,
+            $isClinic,
+            $isSupervisor,
+            $directReportIds,
+            $search,
+            $orderBy,
+            $orderDir,
+            $page,
+            $perPage,
+        );
+    }
+
+
+    public function getPendingData(
+        int $empId,
+        bool $isClinic,
+        bool $isSupervisor,
+        string $search,
+        string $orderBy,
+        string $orderDir,
+        int $page,
+        int $perPage,
+    ): array {
+        if ($isClinic) {
+            return [
+                'data' => [],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'total' => 0, 'from' => 0, 'to' => 0],
+            ];
+        }
+
+        return $this->repo->getPending($empId, $isSupervisor, $search, $orderBy, $orderDir, $page, $perPage);
+    }
+
+
+    public function handleAction(int $tblId, int $empId, string $action, ?string $remarks): void
+    {
+        DB::transaction(function () use ($tblId, $empId, $action, $remarks) {
+            $record = FtwRecord::findOrFail($tblId);
+
+            [$role, $newApprovalStatus, $newProcessStatus] = match ($action) {
+                'approve'     => [
+                    FtwApproval::ROLE_IMMEDIATE_SUP,
+                    FtwApproval::STATUS_APPROVED,
+                    FtwRecord::PROCESS_STATUS_PENDING_ACK  // Move to pending employee acknowledgement
+                ],
+                'disapprove'  => [
+                    FtwApproval::ROLE_IMMEDIATE_SUP,
+                    FtwApproval::STATUS_REJECTED,
+                    FtwRecord::PROCESS_STATUS_COMPLETED    // Mark as completed (rejected)
+                ],
+                'acknowledge' => [
+                    FtwApproval::ROLE_ACK_BY,
+                    FtwApproval::STATUS_APPROVED,
+                    FtwRecord::PROCESS_STATUS_COMPLETED    // Mark as completed (fully approved)
+                ],
+                'reject'      => [
+                    FtwApproval::ROLE_ACK_BY,
+                    FtwApproval::STATUS_REJECTED,
+                    FtwRecord::PROCESS_STATUS_COMPLETED    // Mark as completed (rejected)
+                ],
+            };
+
+            $approval = FtwApproval::where('tbl_id', $tblId)
+                ->where('approver_emp', $empId)
+                ->where('role', $role)
+                ->where('status', FtwApproval::STATUS_PENDING)
+                ->firstOrFail();
+
+            $approval->update([
+                'status'      => $newApprovalStatus,
+                'action_date' => now(),
+                'remarks'     => $remarks,
+            ]);
+
+            $record->update(['process_status' => $newProcessStatus]);
+        });
+    }
+
+
     public function getFormData(): array
     {
         return [
@@ -41,8 +133,12 @@ class FtwService
         $isSupervisor = ! $isClinic && $empId > 0
             && count($this->hris->fetchDirectReports($empId)) > 0;
 
-        $processStatus = ($isClinic || ! $isSupervisor) ? 1 : 2;
-        $dutyNurse     = $empId;
+        // Use constants instead of magic numbers
+        $processStatus = ($isClinic || ! $isSupervisor)
+            ? FtwRecord::PROCESS_STATUS_DRAFT
+            : FtwRecord::PROCESS_STATUS_PENDING_SUP;
+
+        $dutyNurse = $empId;
 
         // Resolve the immediate supervisor before the transaction (external API call)
         if ($isClinic) {
@@ -69,7 +165,7 @@ class FtwService
                 'duty_nurse'     => $dutyNurse,
                 'ftw_file_link'  => $data['ftw_file_link'] ?? null,
                 'emp_shift'      => in_array($rec, array_merge(self::REC_NEEDS_ABSENCE, self::REC_NEEDS_SDH))
-                                        ? ($data['emp_shift'] ?? null) : null,
+                    ? ($data['emp_shift'] ?? null) : null,
                 'absent_count'   => in_array($rec, self::REC_NEEDS_ABSENCE) ? ($data['absent_count'] ?? 0) : 0,
             ]);
 

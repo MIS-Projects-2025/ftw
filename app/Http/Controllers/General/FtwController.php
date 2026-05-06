@@ -18,6 +18,85 @@ class FtwController extends Controller
 
 
 
+    public function index()
+    {
+        $empData      = session('emp_data', []);
+        $empId        = (int) ($empData['emp_id'] ?? 0);
+        $isClinic     = (int) ($empData['emp_station_id'] ?? 0) === 39;
+        $isSupervisor = ! $isClinic && $empId > 0
+            && count($this->hris->fetchDirectReports($empId)) > 0;
+
+        return Inertia::render('Ftw/IndexFtw', [
+            'isSupervisor' => $isSupervisor,
+            'isClinic'     => $isClinic,
+        ]);
+    }
+
+
+    public function historyData(Request $request)
+    {
+        $empData    = session('emp_data', []);
+        $empId      = (int) ($empData['emp_id'] ?? 0);
+        $isClinic   = (int) ($empData['emp_station_id'] ?? 0) === 39;
+        $reports    = (! $isClinic && $empId > 0) ? $this->hris->fetchDirectReports($empId) : [];
+        $isSupervisor    = ! $isClinic && count($reports) > 0;
+        $directReportIds = array_column($reports, 'emp_id');
+
+        return response()->json(
+            $this->service->getHistoryData(
+                $empId,
+                $isClinic,
+                $isSupervisor,
+                $directReportIds,
+                (string) $request->query('search', ''),
+                (string) $request->query('order_by', 'date_created'),
+                (string) $request->query('order_dir', 'desc'),
+                max(1, (int) $request->query('page', 1)),
+                min(50, max(5, (int) $request->query('per_page', 10))),
+            )
+        );
+    }
+
+
+    public function pendingData(Request $request)
+    {
+        $empData      = session('emp_data', []);
+        $empId        = (int) ($empData['emp_id'] ?? 0);
+        $isClinic     = (int) ($empData['emp_station_id'] ?? 0) === 39;
+        $isSupervisor = ! $isClinic && $empId > 0
+            && count($this->hris->fetchDirectReports($empId)) > 0;
+
+        return response()->json(
+            $this->service->getPendingData(
+                $empId,
+                $isClinic,
+                $isSupervisor,
+                (string) $request->query('search', ''),
+                (string) $request->query('order_by', 'date_created'),
+                (string) $request->query('order_dir', 'desc'),
+                max(1, (int) $request->query('page', 1)),
+                min(50, max(5, (int) $request->query('per_page', 10))),
+            )
+        );
+    }
+
+
+    public function handleAction(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'action'  => 'required|in:approve,disapprove,acknowledge,reject',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        $empData = session('emp_data', []);
+        $empId   = (int) ($empData['emp_id'] ?? 0);
+
+        $this->service->handleAction($id, $empId, $validated['action'], $validated['remarks'] ?? null);
+
+        return response()->json(['success' => true]);
+    }
+
+
     public function create()
     {
         $formData  = $this->service->getFormData();
