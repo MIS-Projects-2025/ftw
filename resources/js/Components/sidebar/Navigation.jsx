@@ -3,7 +3,7 @@ import SidebarLink from "@/Components/sidebar/SidebarLink";
 import { LayoutDashboard, ClipboardPlus, ClipboardList } from "lucide-react";
 
 export default function NavLinks({ isSidebarOpen }) {
-    const { emp_data } = usePage().props;
+    const { canCreate } = usePage().props;
 
     return (
         <nav
@@ -22,12 +22,14 @@ export default function NavLinks({ isSidebarOpen }) {
                 icon={<ClipboardList className="w-5 h-5" />}
                 isSidebarOpen={isSidebarOpen}
             />
-            <SidebarLink
-                href={route("ftw.create")}
-                label="New FTW"
-                icon={<ClipboardPlus className="w-5 h-5" />}
-                isSidebarOpen={isSidebarOpen}
-            />
+            {canCreate && (
+                <SidebarLink
+                    href={route("ftw.create")}
+                    label="New FTW"
+                    icon={<ClipboardPlus className="w-5 h-5" />}
+                    isSidebarOpen={isSidebarOpen}
+                />
+            )}
         </nav>
     );
 }

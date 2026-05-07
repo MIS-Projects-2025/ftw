@@ -41,6 +41,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'appName' => config('app.name'), // This pulls from .env
             'display_name' => env('APP_DISPLAY_NAME', ''),
+            'canCreate' => fn() => (int) (session('emp_data.emp_station_id') ?? 0) === 39
+                || session('is_supervisor', false),
         ];
     }
 }

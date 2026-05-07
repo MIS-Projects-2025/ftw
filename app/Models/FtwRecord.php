@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class FtwRecord extends Model
 {
     // Process status constants
-    const PROCESS_STATUS_DRAFT = 1;        // Created by clinic, pending supervisor
-    const PROCESS_STATUS_PENDING_SUP = 2;  // Sent to supervisor, pending approval  
-    const PROCESS_STATUS_PENDING_ACK = 3;  // Approved by sup, pending employee ack
-    const PROCESS_STATUS_COMPLETED = 4;    // Fully approved/rejected/completed
+    const PROCESS_STATUS_PENDING_SUP = 1;
+    const  PROCESS_STATUS_PENDING_ACK = 2;
+    const PROCESS_STATUS_COMPLETED = 3;
+    const PROCESS_STATUS_DISAPPROVED = 6;
 
     protected $table = 'ftw_records';
 
@@ -168,7 +168,7 @@ class FtwRecord extends Model
     public function getProcessStatusLabelAttribute(): string
     {
         return match ($this->process_status) {
-            self::PROCESS_STATUS_DRAFT => 'Draft',
+
             self::PROCESS_STATUS_PENDING_SUP => 'Pending Supervisor Approval',
             self::PROCESS_STATUS_PENDING_ACK => 'Pending Employee Acknowledgement',
             self::PROCESS_STATUS_COMPLETED => 'Completed',
@@ -182,7 +182,7 @@ class FtwRecord extends Model
     public function getProcessStatusBadgeAttribute(): string
     {
         return match ($this->process_status) {
-            self::PROCESS_STATUS_DRAFT => 'secondary',
+
             self::PROCESS_STATUS_PENDING_SUP => 'warning',
             self::PROCESS_STATUS_PENDING_ACK => 'info',
             self::PROCESS_STATUS_COMPLETED => 'success',

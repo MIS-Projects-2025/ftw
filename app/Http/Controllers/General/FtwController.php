@@ -26,6 +26,8 @@ class FtwController extends Controller
         $isSupervisor = ! $isClinic && $empId > 0
             && count($this->hris->fetchDirectReports($empId)) > 0;
 
+        session(['is_supervisor' => $isSupervisor]);
+
         return Inertia::render('Ftw/IndexFtw', [
             'isSupervisor' => $isSupervisor,
             'isClinic'     => $isClinic,
@@ -80,6 +82,38 @@ class FtwController extends Controller
         );
     }
 
+
+    public function bulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action'  => 'required|in:approve,disapprove',
+            'ids'     => 'required|array|min:1',
+            'ids.*'   => 'integer|min:1',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        $empData  = session('emp_data', []);
+        $empId    = (int) ($empData['emp_id'] ?? 0);
+        $isClinic = (int) ($empData['emp_station_id'] ?? 0) === 39;
+
+        if ($isClinic || $empId <= 0) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $isSupervisor = count($this->hris->fetchDirectReports($empId)) > 0;
+        if (! $isSupervisor) {
+            return response()->json(['message' => 'Only supervisors can perform bulk approval.'], 403);
+        }
+
+        $processed = $this->service->bulkAction(
+            $validated['ids'],
+            $empId,
+            $validated['action'],
+            $validated['remarks'] ?? null,
+        );
+
+        return response()->json(['success' => true, 'processed' => $processed]);
+    }
 
     public function handleAction(Request $request, int $id)
     {

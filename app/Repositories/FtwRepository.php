@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 class FtwRepository
 {
     private const ALLOWED_ORDER_BY = [
+        'tbl_id',
         'date_created',
         'emp_name',
         'emp_dept',
@@ -48,6 +49,14 @@ class FtwRepository
                 $query->whereIn('emp_no', array_unique(array_merge($directReportIds, [$empId])));
             } else {
                 $query->where('emp_no', $empId);
+
+                // Regular employees only see completed/final records in History.
+                // Records still in progress (pending supervisor or pending their own ACK)
+                // belong in the Pending tab.
+                $query->whereNotIn('process_status', [
+                    FtwRecord::PROCESS_STATUS_PENDING_SUP,
+                    FtwRecord::PROCESS_STATUS_PENDING_ACK,
+                ]);
             }
         }
 
@@ -55,6 +64,9 @@ class FtwRepository
             $query->where(function ($q) use ($search) {
                 $q->where('emp_name', 'like', "%{$search}%")
                     ->orWhere('emp_dept', 'like', "%{$search}%");
+                if (is_numeric($search)) {
+                    $q->orWhere('tbl_id', (int) $search);
+                }
             });
         }
 
@@ -84,24 +96,44 @@ class FtwRepository
     ): array {
         $orderBy  = in_array($orderBy, self::ALLOWED_ORDER_BY) ? $orderBy : 'date_created';
         $orderDir = strtolower($orderDir) === 'asc' ? 'asc' : 'desc';
-        $role     = $isSupervisor ? FtwApproval::ROLE_IMMEDIATE_SUP : FtwApproval::ROLE_ACK_BY;
 
         $query = FtwRecord::with([
             'recommendationRef',
             'absenceDates',
             'sdhSchedule',
             'restSchedule',
-        ])
-            ->whereHas('approvals', function ($q) use ($empId, $role) {
+        ]);
+
+        if ($isSupervisor) {
+            // Supervisors see records where they have a pending approval row
+            $query->whereHas('approvals', function ($q) use ($empId) {
                 $q->where('approver_emp', $empId)
-                    ->where('role', $role)
+                    ->where('role', FtwApproval::ROLE_IMMEDIATE_SUP)
                     ->where('status', FtwApproval::STATUS_PENDING);
             });
+        } else {
+            // Regular employees see:
+            // (a) records pending their acknowledgement (ROLE_ACK_BY)
+            // (b) their own records still waiting for supervisor approval (PENDING_SUP)
+            $query->where(function ($q) use ($empId) {
+                $q->whereHas('approvals', function ($q2) use ($empId) {
+                    $q2->where('approver_emp', $empId)
+                        ->where('role', FtwApproval::ROLE_ACK_BY)
+                        ->where('status', FtwApproval::STATUS_PENDING);
+                })->orWhere(function ($q2) use ($empId) {
+                    $q2->where('emp_no', $empId)
+                        ->where('process_status', FtwRecord::PROCESS_STATUS_PENDING_SUP);
+                });
+            });
+        }
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('emp_name', 'like', "%{$search}%")
                     ->orWhere('emp_dept', 'like', "%{$search}%");
+                if (is_numeric($search)) {
+                    $q->orWhere('tbl_id', (int) $search);
+                }
             });
         }
 
@@ -230,5 +262,61 @@ class FtwRepository
             'action_date'  => $status !== FtwApproval::STATUS_PENDING ? now() : null,
             'remarks'      => $remarks,
         ]);
+    }
+
+    /**
+     * Bulk approve or disapprove records for a supervisor.
+     * Only records where the supervisor has a pending approval row are processed.
+     * Returns the number of records actually updated.
+     */
+    public function bulkApprove(array $ids, int $empId, string $action, ?string $remarks): int
+    {
+        [$newApprovalStatus, $newProcessStatus] = match ($action) {
+            'approve'    => [FtwApproval::STATUS_APPROVED, FtwRecord::PROCESS_STATUS_PENDING_ACK],
+            'disapprove' => [FtwApproval::STATUS_REJECTED, FtwRecord::PROCESS_STATUS_DISAPPROVED],
+        };
+
+        $count = 0;
+
+        foreach ($ids as $tblId) {
+            $tblId = (int) $tblId;
+
+            $updated = FtwApproval::where('tbl_id', $tblId)
+                ->where('approver_emp', $empId)
+                ->where('role', FtwApproval::ROLE_IMMEDIATE_SUP)
+                ->where('status', FtwApproval::STATUS_PENDING)
+                ->update([
+                    'status'      => $newApprovalStatus,
+                    'action_date' => now(),
+                    'remarks'     => $remarks,
+                ]);
+
+            if ($updated > 0) {
+                $record = FtwRecord::find($tblId);
+                $record?->update(['process_status' => $newProcessStatus]);
+
+                // Create the employee acknowledgement row so the employee
+                // can see and acknowledge the record after bulk approval.
+                if ($action === 'approve' && $record && (int) $record->emp_no > 0) {
+                    $alreadyExists = FtwApproval::where('tbl_id', $tblId)
+                        ->where('role', FtwApproval::ROLE_ACK_BY)
+                        ->where('status', FtwApproval::STATUS_PENDING)
+                        ->exists();
+
+                    if (! $alreadyExists) {
+                        $this->createApproval(
+                            $tblId,
+                            (int) $record->emp_no,
+                            FtwApproval::ROLE_ACK_BY,
+                            FtwApproval::STATUS_PENDING,
+                        );
+                    }
+                }
+
+                $count++;
+            }
+        }
+
+        return $count;
     }
 }

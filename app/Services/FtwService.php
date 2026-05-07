@@ -81,22 +81,22 @@ class FtwService
                 'approve'     => [
                     FtwApproval::ROLE_IMMEDIATE_SUP,
                     FtwApproval::STATUS_APPROVED,
-                    FtwRecord::PROCESS_STATUS_PENDING_ACK  // Move to pending employee acknowledgement
+                    FtwRecord::PROCESS_STATUS_PENDING_ACK,
                 ],
                 'disapprove'  => [
                     FtwApproval::ROLE_IMMEDIATE_SUP,
                     FtwApproval::STATUS_REJECTED,
-                    FtwRecord::PROCESS_STATUS_COMPLETED    // Mark as completed (rejected)
+                    FtwRecord::PROCESS_STATUS_DISAPPROVED,
                 ],
                 'acknowledge' => [
                     FtwApproval::ROLE_ACK_BY,
                     FtwApproval::STATUS_APPROVED,
-                    FtwRecord::PROCESS_STATUS_COMPLETED    // Mark as completed (fully approved)
+                    FtwRecord::PROCESS_STATUS_COMPLETED,
                 ],
                 'reject'      => [
                     FtwApproval::ROLE_ACK_BY,
                     FtwApproval::STATUS_REJECTED,
-                    FtwRecord::PROCESS_STATUS_COMPLETED    // Mark as completed (rejected)
+                    FtwRecord::PROCESS_STATUS_DISAPPROVED,
                 ],
             };
 
@@ -113,9 +113,35 @@ class FtwService
             ]);
 
             $record->update(['process_status' => $newProcessStatus]);
+
+            // When a supervisor approves a clinic-created record, the employee
+            // acknowledgement row doesn't exist yet — create it now so the
+            // employee can see and acknowledge the record in their Pending tab.
+            if ($action === 'approve' && (int) $record->emp_no > 0) {
+                $alreadyExists = FtwApproval::where('tbl_id', $tblId)
+                    ->where('role', FtwApproval::ROLE_ACK_BY)
+                    ->where('status', FtwApproval::STATUS_PENDING)
+                    ->exists();
+
+                if (! $alreadyExists) {
+                    $this->repo->createApproval(
+                        $tblId,
+                        (int) $record->emp_no,
+                        FtwApproval::ROLE_ACK_BY,
+                        FtwApproval::STATUS_PENDING,
+                    );
+                }
+            }
         });
     }
 
+
+    public function bulkAction(array $ids, int $empId, string $action, ?string $remarks): int
+    {
+        return DB::transaction(function () use ($ids, $empId, $action, $remarks) {
+            return $this->repo->bulkApprove($ids, $empId, $action, $remarks);
+        });
+    }
 
     public function getFormData(): array
     {
@@ -135,8 +161,8 @@ class FtwService
 
         // Use constants instead of magic numbers
         $processStatus = ($isClinic || ! $isSupervisor)
-            ? FtwRecord::PROCESS_STATUS_DRAFT
-            : FtwRecord::PROCESS_STATUS_PENDING_SUP;
+            ? FtwRecord::PROCESS_STATUS_PENDING_SUP
+            : FtwRecord::PROCESS_STATUS_PENDING_ACK;
 
         $dutyNurse = $empId;
 
@@ -185,7 +211,8 @@ class FtwService
             }
 
             // ── 5. Approvals ────────────────────────────────────────────────
-            if ($processStatus === 1 && $immediateSup > 0) {
+            if ($processStatus === FtwRecord::PROCESS_STATUS_PENDING_SUP && $immediateSup > 0) {
+                // Clinic-created: waiting for supervisor approval
                 $this->repo->createApproval(
                     $record->tbl_id,
                     $immediateSup,
@@ -194,7 +221,8 @@ class FtwService
                 );
             }
 
-            if ($processStatus === 2) {
+            if ($processStatus === FtwRecord::PROCESS_STATUS_PENDING_ACK) {
+                // Supervisor-created: auto-approve sup row, then queue employee ACK
                 if ($immediateSup > 0) {
                     $this->repo->createApproval(
                         $record->tbl_id,

@@ -23,7 +23,8 @@ Route::prefix($app_name)
         Route::get("/employees", [FtwController::class, 'searchEmployees'])->name('employees');
         Route::get("/employees/{id}/work", [FtwController::class, 'employeeWorkDetails'])->name('employee.work');
 
-        Route::post("/",          [FtwController::class, 'store'])->name('store');
+        Route::post("/",            [FtwController::class, 'store'])->name('store');
+        Route::post("/bulk-action", [FtwController::class, 'bulkAction'])->name('bulk-action');
         Route::post("/{id}/action", [FtwController::class, 'handleAction'])
             ->whereNumber('id')
             ->name('action');
