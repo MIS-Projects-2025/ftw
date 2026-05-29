@@ -1,4 +1,4 @@
-import { Label } from "@/components/ui/label";
+import { Label } from "@/Components/ui/label";
 
 /**
  * A labelled form field wrapper with optional inline error message.

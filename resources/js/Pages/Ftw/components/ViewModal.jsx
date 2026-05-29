@@ -1,11 +1,11 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/Components/ui/button";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/Components/ui/dialog";
 import { Loader2, CheckCircle } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { RecordDetails, DiagnosisSection } from "./RecordDetails";

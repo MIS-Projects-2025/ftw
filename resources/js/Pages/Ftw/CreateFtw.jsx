@@ -4,20 +4,20 @@ import { useForm } from "@inertiajs/react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/Components/ui/button";
+import { Input } from "@/Components/ui/input";
+import { Textarea } from "@/Components/ui/textarea";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { Combobox } from "@/components/ui/combobox";
+} from "@/Components/ui/select";
+import { Combobox } from "@/Components/ui/combobox";
 import { Badge } from "@/Components/ui/badge";
-import { DatePicker, MultiDatePicker } from "@/components/ui/date-picker";
-import { Label } from "@/components/ui/label";
+import { DatePicker, MultiDatePicker } from "@/Components/ui/date-picker";
+import { Label } from "@/Components/ui/label";
 import { X, Stethoscope, ChevronLeft } from "lucide-react";
 import { FieldRow } from "./components/FieldRow";
 import { ShiftSelect } from "./components/ShiftSelect";

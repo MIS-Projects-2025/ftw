@@ -4,7 +4,7 @@ import { usePage } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import ServerTable from "@/Components/ServerTable";
 import { Pagination } from "@/Components/Pagination";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/Components/ui/button";
 import { toast } from "sonner";
 import { ClipboardPlus, Search, Loader2, RefreshCw } from "lucide-react";
 
