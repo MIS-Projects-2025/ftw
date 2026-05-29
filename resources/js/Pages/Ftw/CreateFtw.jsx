@@ -15,7 +15,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/Components/ui/badge";
 import { DatePicker, MultiDatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { X, Stethoscope, ChevronLeft } from "lucide-react";
